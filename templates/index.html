@@ -22,10 +22,13 @@
     p { color: #aeb8ca; line-height: 1.55; }
     .drop {
       display: block; margin: 24px 0 14px; padding: 26px 18px;
-      border: 1px dashed #68758c; border-radius: 14px; text-align: center;
-      background: #202735;
+      border: 2px dashed #68758c; border-radius: 14px; text-align: center;
+      background: #202735; cursor: pointer; transition: border-color .15s, background .15s;
     }
-    input[type=file] { display: block; width: 100%; margin-top: 14px; color: #cdd5e3; }
+    .drop.dragover { border-color: #7c9cff; background: #293650; }
+    .drop-hint { display: block; margin-top: 8px; color: #aeb8ca; font-size: 13px; }
+    .file-name { display: block; margin-top: 10px; color: #cbd8ff; overflow-wrap: anywhere; }
+    input[type=file] { display: block; width: 100%; margin-top: 14px; color: #cdd5e3; cursor: pointer; }
     button, .link {
       display: inline-block; border: 0; border-radius: 11px; padding: 12px 17px;
       background: #7c9cff; color: #111827; font-weight: 750; font-size: 15px;
@@ -48,13 +51,51 @@
   <p>Загрузи файл и получи короткую ссылку для скачивания.</p>
 
   <form action="/upload" method="post" enctype="multipart/form-data">
-    <label class="drop">
-      Выбери файл для загрузки
-      <input type="file" name="file" required>
+    <label class="drop" id="drop-zone">
+      <strong>Перетащи файл сюда</strong>
+      <span class="drop-hint">или нажми, чтобы выбрать его на компьютере</span>
+      <input id="file-input" type="file" name="file" required>
+      <span class="file-name" id="file-name">Файл не выбран</span>
     </label>
     <button type="submit">Загрузить файл</button>
   </form>
   <p class="small">Максимальный размер одного файла: {{ max_upload_mb }} МБ.</p>
+
+  <script>
+    (() => {
+      const zone = document.getElementById('drop-zone');
+      const input = document.getElementById('file-input');
+      const fileName = document.getElementById('file-name');
+
+      function showFile(file) {
+        fileName.textContent = file ? `Выбран файл: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} МБ)` : 'Файл не выбран';
+      }
+
+      input.addEventListener('change', () => showFile(input.files[0]));
+      for (const eventName of ['dragenter', 'dragover']) {
+        zone.addEventListener(eventName, event => {
+          event.preventDefault();
+          zone.classList.add('dragover');
+        });
+      }
+      for (const eventName of ['dragleave', 'drop']) {
+        zone.addEventListener(eventName, event => {
+          event.preventDefault();
+          zone.classList.remove('dragover');
+        });
+      }
+      zone.addEventListener('drop', event => {
+        const files = event.dataTransfer && event.dataTransfer.files;
+        if (!files || !files.length) return;
+        try {
+          input.files = files;
+          showFile(input.files[0]);
+        } catch (_) {
+          fileName.textContent = 'Не удалось выбрать файл. Нажми сюда и выбери его вручную.';
+        }
+      });
+    })();
+  </script>
 
   {% if code %}
   <section class="result">
