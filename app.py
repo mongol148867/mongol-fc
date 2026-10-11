@@ -20,9 +20,8 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_MB", "100"))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
 
-# Five-digit numeric codes have only 90,000 possibilities (10000–99999).
+# Five-character codes use Latin letters (upper/lowercase) and digits.
 # This is convenient but not suitable for private/sensitive files.
-CODE_MIN, CODE_MAX = 10000, 99999
 
 
 def connect_db():
@@ -72,7 +71,7 @@ def upload():
     try:
         with connect_db() as con:
             for _ in range(100):
-                code = str(random.randint(CODE_MIN, CODE_MAX))
+                code = "".join(random.choices(string.ascii_letters + string.digits, k=5))
                 try:
                     con.execute(
                         "INSERT INTO files (code, stored_name, original_name) VALUES (?, ?, ?)",
@@ -98,7 +97,7 @@ def upload():
 
 @app.get("/<code>")
 def download(code):
-    if len(code) != 5 or not code.isdigit():
+    if len(code) != 5 or not code.isascii() or not code.isalnum():
         abort(404)
 
     with connect_db() as con:
