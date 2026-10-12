@@ -79,11 +79,15 @@ def upload():
     if not uploaded or not uploaded.filename:
         return render_template("index.html", error_key="choose_file", max_upload_mb=MAX_UPLOAD_MB, lang=lang), 400
 
-    try:
-        expires_days = int(request.form.get("expires_days", "7"))
-    except (TypeError, ValueError):
-        expires_days = 7
-    expires_days = max(1, min(30, expires_days))
+    expires_value = request.form.get("expires_days", "7").strip().lower()
+    if expires_value in {"never", "none", ""}:
+        expires_days = None
+    else:
+        try:
+            expires_days = int(expires_value)
+        except (TypeError, ValueError):
+            expires_days = 7
+        expires_days = max(1, min(30, expires_days))
 
     original_name = uploaded.filename
     safe_name = secure_filename(original_name) or "file"
@@ -91,7 +95,7 @@ def upload():
     stored_name = "".join(random.choices(string.ascii_letters + string.digits, k=24)) + suffix
     destination = UPLOAD_DIR / stored_name
     uploaded.save(destination)
-    expires_at = (datetime.utcnow() + timedelta(days=expires_days)).isoformat(timespec="seconds")
+    expires_at = (datetime.utcnow() + timedelta(days=expires_days)).isoformat(timespec="seconds") if expires_days is not None else None
 
     try:
         with connect_db() as con:
